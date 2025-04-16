@@ -1,0 +1,28 @@
+name: Deploy web app
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name:  Connect and Deploy to Remote Server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.ip }}
+          username: ${{ secrets.ssname }}
+          key: ${{ secrets.ssh }}
+          script: |
+            cd /home/ubuntu/turfai/bootstrap
+            echo "Stopping Docker Compose..."
+            docker-compose down
+            echo "Backing up existing containers..."
+            for c in $(docker ps -a -q); do
+              docker commit $c ${c}_backup
+            done
+            echo "Pulling latest changes from GitHub..."
+            git -C /home/ubuntu/turfai pull origin main
+            echo "Rebuilding and starting containers..."
+            docker-compose up --build -d
+            echo "Deployment completed!"
